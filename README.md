@@ -14,6 +14,13 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 - **Dark Mode UI** - Sleek solarized dark theme for the menu
 - **Keyboard Shortcut** - Press `Ctrl+Shift+F` to quickly open the menu
 
+### Usage
+Try:
+
+- Right-click the tray icon and select "Open Menu" for settings
+- Select "Run on Startup" to always display the activity
+
+  
 ## Installation
 
 ### Option 1: Run from Source
@@ -36,14 +43,16 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 
 ## Setup
 
-### Discord Application
+### Custom Discord Application
+
+This version comes with standard preconfigured icons, if you want to put custom icons follow these steps
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click "New Application" and give it a name (e.g., "FL Studio")
 3. Copy the **Application ID**
 4. Open `fl_discord_rpc.py` and replace `YOUR_CLIENT_ID_HERE` with your Application ID:
    ```python
-   DISCORD_CLIENT_ID = "1486292534002188350"  # Your ID here
+   DISCORD_CLIENT_ID = "############"  # Your ID here
    ```
 5. Upload artwork assets in the Discord Developer Portal:
    - **Large image**: `fl_logo` (your FL Studio themed image)
