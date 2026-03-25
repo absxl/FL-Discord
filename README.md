@@ -31,10 +31,10 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 
 - **Real-time Discord Presence** - Shows your current FL Studio project name on Discord
 - **Playing/Idle Status** - Toggle between active work sessions and idle
-- **Custom Statuses** - Choose from presets or create your own custom statuses (up to 5)
-- **Session Timer** - Tracks how long you've been working on a project
+- **Custom Statuses** - Choose from presets or create your own custom statuses (up to 3)
+- **Session Timer** - Tracks how long you've been working on a project (live updates!)
 - **Run at Startup** - Option to automatically start when Windows boots
-- **Dark Mode UI** - Sleek solarized dark theme for the menu
+- **Dark/Light Mode** - Toggle between dark and light theme
 - **Keyboard Shortcut** - Press `Ctrl+Shift+F` to quickly open the menu
 
 ## Usage
@@ -47,9 +47,11 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 ### Menu Options
 
 - **Playing/Idle** - Toggle your work status
-- **Status** - Select from presets or create custom statuses
-- **Run at Startup** - Enable/disable auto-start with Windows
+- **Status** - Select from presets or create custom statuses (up to 3)
+- **Session** - Shows your current session time (live updates!)
 - **Open Log** - View the application log file
+- **Switch Theme** - Toggle between dark and light mode
+- **Join Discord** - Join our Discord server for support
 - **Donate** - Support the project!
 - **Quit** - Exit the application
 
@@ -111,7 +113,7 @@ If you want to build your own EXE:
 - Producing
 - Editing
 
-Plus up to **5 custom statuses** you can create!
+Plus up to **3 custom statuses** you can create!
 
 ## Files & Locations
 
