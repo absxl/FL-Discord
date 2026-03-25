@@ -8,7 +8,7 @@
 #  Just run it and it lives in your system tray.
 # =============================================================================
 
-DISCORD_CLIENT_ID = "YOUR_CLIENT_ID_HERE"  # <-- paste your Discord App ID here
+DISCORD_CLIENT_ID = "YOUR_CLIENT_ID_HERE"   # <-- paste your Discord App ID here
 
 LARGE_IMAGE = "fl_logo"  # art asset key you uploaded to Discord dev portal
 SMALL_IMAGE_PLAY = "icon_play"
