@@ -8,7 +8,7 @@
 #  Just run it and it lives in your system tray.
 # =============================================================================
 
-DISCORD_CLIENT_ID = "YOUR_CLIENT_ID_HERE"   # <-- paste your Discord App ID here
+DISCORD_CLIENT_ID = "YOUR_CLIENT_ID_HERE"  # <-- paste your Discord App ID here
 
 LARGE_IMAGE = "fl_logo"  # art asset key you uploaded to Discord dev portal
 SMALL_IMAGE_PLAY = "icon_play"
@@ -97,30 +97,13 @@ except:
 _log_dir = os.path.join(os.getenv("APPDATA", os.path.expanduser("~")), "FLDiscordRPC")
 os.makedirs(_log_dir, exist_ok=True)
 _config_file = os.path.join(_log_dir, "config.json")
-_log_file = os.path.join(_log_dir, "fl_discord_rpc.log")
-
-def _check_log_size():
-    try:
-        if os.path.exists(_log_file):
-            size = os.path.getsize(_log_file)
-            if size > 1024 * 1024:
-                os.remove(_log_file)
-                log.info("Log file deleted (exceeded 1MB)")
-    except:
-        pass
-
-_check_log_size()
-
 logging.basicConfig(
-    filename=_log_file,
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+    filename=os.path.join(_log_dir, "fl_discord_rpc.log"),
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    datefmt="%H:%M:%S",
 )
 log = logging.getLogger("fl_rpc")
-log.info("=" * 60)
-log.info("FL Discord RPC v1.0 starting...")
-log.info("Log file: %s", _log_file)
 
 # =============================================================================
 #  Config persistence
@@ -141,17 +124,8 @@ STATUS_PRESETS = [
 def load_config():
     try:
         with open(_config_file, "r") as f:
-            data = json.load(f)
-            log.debug("Configuration loaded from %s: %s", _config_file, data)
-            return data
-    except FileNotFoundError:
-        log.debug("No configuration file found, using defaults")
-        return {}
-    except json.JSONDecodeError as e:
-        log.warning("Failed to parse config file: %s", e)
-        return {}
-    except Exception as e:
-        log.warning("Failed to load config: %s", e)
+            return json.load(f)
+    except:
         return {}
 
 def get_all_statuses():
@@ -162,54 +136,8 @@ def save_config(config):
     try:
         with open(_config_file, "w") as f:
             json.dump(config, f, indent=2)
-        log.debug("Configuration saved to %s: %s", _config_file, config)
     except Exception as e:
-        log.error("Failed to save config: %s", e)
-
-
-def _get_startup_path():
-    import winreg
-    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ)
-    try:
-        value, _ = winreg.QueryValueEx(key, "FLDiscordRPC")
-        winreg.CloseKey(key)
-        log.debug("Startup entry found: %s", value)
-        return True
-    except FileNotFoundError:
-        winreg.CloseKey(key)
-        log.debug("No startup entry found")
-        return False
-    except Exception as e:
-        winreg.CloseKey(key)
-        log.warning("Error checking startup: %s", e)
-        return False
-
-
-def _set_startup(enable):
-    import winreg
-    log.info("Setting run at startup: %s", "enabled" if enable else "disabled")
-    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_WRITE)
-    try:
-        if enable:
-            exe_path = sys.executable
-            script_path = os.path.abspath(__file__)
-            startup_cmd = f'"{exe_path}" "{script_path}"'
-            winreg.SetValueEx(key, "FLDiscordRPC", 0, winreg.REG_SZ, startup_cmd)
-            log.info("Startup enabled successfully. Command: %s", startup_cmd)
-        else:
-            try:
-                winreg.DeleteValue(key, "FLDiscordRPC")
-                log.info("Startup disabled successfully")
-            except FileNotFoundError:
-                log.debug("Startup entry did not exist")
-        winreg.CloseKey(key)
-    except PermissionError as e:
-        log.error("Permission denied when setting startup. Run as administrator may be required: %s", e)
-        winreg.CloseKey(key)
-    except Exception as e:
-        log.error("Failed to set startup: %s", e)
-        winreg.CloseKey(key)
-
+        log.warning("Failed to save config: %s", e)
 
 # =============================================================================
 #  FL Studio window reader
@@ -232,7 +160,6 @@ def _find_fl_window():
             return
         title = win32gui.GetWindowText(hwnd)
         if " - FL Studio" in title:
-            log.debug("Found FL Studio window: '%s'", title)
             result[0] = hwnd
             result[1] = title
 
@@ -255,9 +182,6 @@ def _read_fl_state(hwnd, title: str) -> dict:
     project = (m.group(1) or "").strip() if m else ""
     if not project:
         project = "Untitled"
-        log.debug("No project name found in title: '%s'", title)
-    else:
-        log.debug("Parsed project from title '%s': '%s'", title, project)
 
     return {
         "project": project,
@@ -276,21 +200,15 @@ class DiscordRPC:
         self._connected = False
         self._last_kwargs = {}
         self._last_retry = 0.0
-        log.info("DiscordRPC initialized with client ID: %s", client_id)
 
     def _connect(self):
-        log.info("Attempting to connect to Discord...")
         try:
             self._rpc = Presence(self._id)
             self._rpc.connect()
             self._connected = True
-            log.info("Discord RPC connected successfully!")
+            log.info("Discord connected.")
         except DiscordNotFound:
-            log.warning("Discord is not running. Please start Discord to enable Rich Presence.")
-            self._rpc = None
-            self._connected = False
-        except InvalidID as e:
-            log.error("Invalid Discord Client ID: %s", e)
+            log.warning("Discord not running.")
             self._rpc = None
             self._connected = False
         except Exception as e:
@@ -301,7 +219,6 @@ class DiscordRPC:
     def _ensure_connected(self):
         if self._connected:
             return True
-        log.debug("Not connected, attempting to reconnect...")
         now = time.monotonic()
         if now - self._last_retry < 10.0:
             return False
@@ -311,50 +228,35 @@ class DiscordRPC:
 
     def update(self, force=False, **kwargs):
         if not self._ensure_connected():
-            log.debug("Skipping update - not connected")
             return
         if kwargs == self._last_kwargs and not force:
-            log.debug("Skipping update - kwargs unchanged")
             return
         try:
             self._rpc.update(**kwargs)
             self._last_kwargs = kwargs
-            log.info("Discord presence updated - Project: '%s' | Status: '%s' | Playing: %s", 
-                    kwargs.get("details", "?"), 
-                    kwargs.get("state", "?"),
-                    "Yes" if kwargs.get("start") else "No")
-        except InvalidPipe as e:
-            log.error("Discord pipe error: %s (Discord may be closed)", e)
-            self._connected = False
+            log.info("Presence updated: %s", kwargs.get("details", "?"))
         except Exception as e:
-            log.warning("Discord update failed: %s", e)
+            log.warning("update() failed: %s", e)
             self._connected = False
 
     def clear(self):
         self._last_kwargs = {}
         if not self._connected:
-            log.debug("Cannot clear - not connected")
             return
         try:
             self._rpc.clear()
-            log.info("Discord presence cleared.")
-        except Exception as e:
-            log.warning("Failed to clear presence: %s", e)
+            log.info("Presence cleared.")
+        except Exception:
+            pass
 
     def close(self):
-        log.info("Closing Discord RPC connection...")
         self.clear()
         if self._rpc:
             try:
                 self._rpc.close()
-                log.info("Discord RPC closed successfully.")
-            except Exception as e:
-                log.warning("Error closing RPC: %s", e)
+            except Exception:
+                pass
 
-
-# =============================================================================
-#  Build presence kwargs from FL state
-# =============================================================================
 
 
 def build_presence(state: dict, play_start: float, status: str) -> dict:
@@ -376,11 +278,6 @@ def build_presence(state: dict, play_start: float, status: str) -> dict:
     )
     if playing and play_start > 0:
         kwargs["start"] = int(play_start)
-        log.debug("Presence built: project='%s', status='%s', playing=%s, start=%d", 
-                  project, state_text, playing, int(play_start))
-    else:
-        log.debug("Presence built: project='%s', status='%s', playing=%s", 
-                  project, state_text, playing)
 
     return kwargs
 
@@ -621,8 +518,7 @@ class SolarizedMenu:
             font=("Segoe UI", 10, "bold"),
             bg=colors["accent"],
             fg=colors["highlight"],
-            activebackground=colors["accent"],
-            activeforeground=colors["highlight"],
+            activebackground=colors["selected"],
             relief="flat",
             bd=0,
             cursor="hand2",
@@ -715,23 +611,16 @@ class SolarizedMenu:
         pass
             
     def toggle_play(self):
-        log.info("Menu: Set to Playing")
         app_state["playing"] = True
         if app_state["session_start"] == 0:
             app_state["session_start"] = time.time()
-        config = load_config()
-        save_config({"playing": app_state["playing"], "status": app_state["status"], "custom_statuses": config.get("custom_statuses", [])})
-        self._rebuild_current_window()
+        save_config({"playing": app_state["playing"], "status": app_state["status"]})
         
     def toggle_idle(self):
-        log.info("Menu: Set to Idle")
         app_state["playing"] = False
-        config = load_config()
-        save_config({"playing": app_state["playing"], "status": app_state["status"], "custom_statuses": config.get("custom_statuses", [])})
-        self._rebuild_current_window()
+        save_config({"playing": app_state["playing"], "status": app_state["status"]})
         
     def set_status(self, status):
-        log.info("Menu: Status changed to '%s'", status)
         app_state["status"] = status
         config = load_config()
         custom_statuses = config.get("custom_statuses", [])
@@ -742,32 +631,23 @@ class SolarizedMenu:
         status = self.custom_entry.get().strip()
         if not status:
             return
-        log.info("Adding custom status: '%s'", status)
         config = load_config()
         custom_statuses = config.get("custom_statuses", [])[:5]
         if status not in custom_statuses and len(custom_statuses) < 5:
             custom_statuses.append(status)
             save_config({"playing": app_state["playing"], "status": app_state["status"], "custom_statuses": custom_statuses})
-            log.info("Custom status added. Total: %d/5", len(custom_statuses))
-        elif status in custom_statuses:
-            log.info("Custom status '%s' already exists", status)
-        elif len(custom_statuses) >= 5:
-            log.warning("Cannot add more custom statuses (max 5 reached)")
         self.custom_entry.delete(0, "end")
         self._rebuild_current_window()
         
     def delete_custom_status(self, status):
-        log.info("Deleting custom status: '%s'", status)
         config = load_config()
         custom_statuses = config.get("custom_statuses", [])
         if status in custom_statuses:
             custom_statuses.remove(status)
             save_config({"playing": app_state["playing"], "status": app_state["status"], "custom_statuses": custom_statuses})
-            log.info("Custom status deleted. Remaining: %d", len(custom_statuses))
         if app_state["status"] == status:
             app_state["status"] = STATUS_PRESETS[0]
             save_config({"playing": app_state["playing"], "status": app_state["status"], "custom_statuses": custom_statuses})
-            log.info("Reset status to default: '%s'", STATUS_PRESETS[0])
         self._rebuild_current_window()
         
     def _rebuild_current_window(self):
@@ -793,28 +673,30 @@ def _run_tray(stop_event: threading.Event, icon_ref):
     global solarized_menu, _stop_event
     _stop_event = stop_event
     
-    log.info("Initializing system tray...")
     solarized_menu = SolarizedMenu(lambda: _quit())
-    log.info("Menu initialized")
     
     if HAS_KEYBOARD:
         try:
             def toggle_menu():
-                log.info("Keyboard shortcut pressed (Ctrl+Shift+F)")
+                log.info("Keyboard shortcut pressed")
                 solarized_menu.show()
             keyboard.add_hotkey("ctrl+shift+f", toggle_menu)
-            log.info("Keyboard shortcut registered: Ctrl+Shift+F opens menu")
+            log.info("Keyboard shortcut ctrl+shift+f registered")
         except Exception as e:
             log.warning("Could not register keyboard shortcut: %s", e)
-    else:
-        log.info("Keyboard module not available, using tray menu only")
     
-    def toggle_startup(icon, _):
-        current = _get_startup_path()
-        _set_startup(not current)
-        
+    def on_quit(icon, _):
+        stop_event.set()
+        icon.stop()
+    
+    def on_open_log(icon, _):
+        os.startfile(_log_dir)
+    
+    def on_donate(icon, _):
+        import webbrowser
+        webbrowser.open("https://www.paypal.com/donate/?hosted_button_id=VQWNYHWLKV9DL")
+    
     def on_show_menu(icon, _):
-        log.debug("Tray menu: Open Menu clicked")
         solarized_menu.show()
     
     def on_left_click(icon):
@@ -824,18 +706,12 @@ def _run_tray(stop_event: threading.Event, icon_ref):
         except Exception as e:
             log.error("Left click error: %s", e)
     
-    def on_open_log(icon, _):
-        os.startfile(_log_dir)
-        
-    def on_donate(icon, _):
-        import webbrowser
-        webbrowser.open("https://www.paypal.com/donate/?hosted_button_id=VQWNYHWLKV9DL")
-        
-    def on_quit(icon, _):
-        _quit()
-    
-    def get_startup_label():
-        return "Run at Startup ✓" if _get_startup_path() else "Run at Startup"
+    icon = pystray.Icon(
+        "fl_discord_rpc",
+        _make_tray_icon(),
+        "FL Discord RPC",
+        on_left_click=on_left_click,
+    )
     
     def create_menu():
         menu = pystray.Menu(
@@ -843,20 +719,11 @@ def _run_tray(stop_event: threading.Event, icon_ref):
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Open Menu", on_show_menu),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem(lambda _: get_startup_label(), toggle_startup),
             pystray.MenuItem("Open Log Folder", on_open_log),
             pystray.MenuItem("Donate", on_donate),
-            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", on_quit),
         )
         icon.menu = menu
-    
-    icon = pystray.Icon(
-        "fl_discord_rpc",
-        _make_tray_icon(),
-        "FL Discord RPC",
-        on_left_click=on_left_click,
-    )
     
     icon_ref[0] = icon
     create_menu()
@@ -882,12 +749,7 @@ def _quit():
 
 
 def main():
-    log.info("=" * 60)
-    log.info("FL Discord RPC v1.0")
-    log.info("=" * 60)
-    
     if DISCORD_CLIENT_ID == "YOUR_CLIENT_ID_HERE":
-        log.error("Discord Client ID not configured!")
         ctypes.windll.user32.MessageBoxW(
             0,
             "You haven't set your Discord Client ID!\n\n"
@@ -902,20 +764,12 @@ def main():
     config = load_config()
     app_state["playing"] = config.get("playing", True)
     app_state["status"] = config.get("status", "Creating")
-    
-    log.info("Configuration loaded:")
-    log.info("  - Playing: %s", app_state["playing"])
-    log.info("  - Status: %s", app_state["status"])
-    log.info("  - Custom statuses: %s", config.get("custom_statuses", []))
-    log.info("  - Run at startup: %s", _get_startup_path())
-    log.info("Starting FL Discord RPC...")
-    log.info("Poll interval: %s seconds", POLL_INTERVAL)
-    log.info("Clear after: %s seconds", CLEAR_AFTER)
+
+    log.info("FL Discord RPC starting. Client ID: %s", DISCORD_CLIENT_ID)
 
     stop_event = threading.Event()
 
     icon_ref = [None]
-    log.info("Starting system tray icon...")
     tray_thread = threading.Thread(target=_run_tray, args=(stop_event, icon_ref), daemon=True)
     tray_thread.start()
 
@@ -924,8 +778,6 @@ def main():
     last_seen_fl = 0.0
     fl_was_open = False
     last_project = ""
-    
-    log.info("Main loop started. Waiting for FL Studio...")
 
     while not stop_event.is_set():
         hwnd, title = _find_fl_window()
@@ -936,52 +788,31 @@ def main():
                 if closed_duration > CLEAR_AFTER:
                     rpc.clear()
                     fl_was_open = False
-                    log.info("FL Studio closed — presence cleared after %.1f seconds", closed_duration)
+                    log.info("FL Studio closed — presence cleared.")
         else:
             last_seen_fl = time.monotonic()
-            if not fl_was_open:
-                log.info("FL Studio detected! Window: '%s'", title)
             fl_was_open = True
 
             state = _read_fl_state(hwnd, title)
             
             if state["project"] != last_project:
-                log.info("Project changed: '%s' -> '%s'", last_project or "(none)", state["project"])
+                log.info("Project changed: '%s' -> '%s'", last_project, state["project"])
                 last_project = state["project"]
             
             state["playing"] = app_state["playing"]
             
             if app_state["playing"] and app_state["session_start"] == 0:
                 app_state["session_start"] = time.time()
-                log.info("Session started. Status: '%s'", app_state["status"])
             
             rpc_start = app_state["session_start"] if app_state["playing"] and app_state["session_start"] > 0 else 0
             kwargs = build_presence(state, rpc_start, app_state["status"])
-            
-            last_playing = getattr(rpc, '_last_playing', None)
-            last_status = getattr(rpc, '_last_status', None)
-            force_update = (
-                app_state["playing"] != last_playing or 
-                app_state["status"] != last_status
-            )
-            rpc.update(force=force_update, **kwargs)
-            rpc._last_playing = app_state["playing"]
-            rpc._last_status = app_state["status"]
+            rpc.update(**kwargs)
 
         time.sleep(POLL_INTERVAL)
 
-    log.info("Saving configuration...")
-    config = load_config()
-    save_config({
-        "playing": app_state["playing"], 
-        "status": app_state["status"],
-        "custom_statuses": config.get("custom_statuses", [])
-    })
-    log.info("Configuration saved.")
+    save_config({"playing": app_state["playing"], "status": app_state["status"]})
     rpc.close()
-    log.info("=" * 60)
     log.info("FL Discord RPC stopped.")
-    log.info("=" * 60)
 
 
 if __name__ == "__main__":
