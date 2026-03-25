@@ -19,6 +19,14 @@
 
 A lightweight Windows app that shows your FL Studio project as Discord Rich Presence. Track your creative sessions and share what you're working on with friends!
 
+## Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/tray.png" width="200" alt="Tray Menu Screenshot">
+  <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/status.png" width="200" alt="Status Screenshot">
+  <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/menu.png" width="200" alt="Menu Screenshot">:
+</p>
+
 ## Features
 
 - **Real-time Discord Presence** - Shows your current FL Studio project name on Discord
@@ -29,6 +37,22 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 - **Dark Mode UI** - Sleek solarized dark theme for the menu
 - **Keyboard Shortcut** - Press `Ctrl+Shift+F` to quickly open the menu
 
+## Usage
+
+### Opening the Menu
+
+- Press **Ctrl+Shift+F** on your keyboard
+- Or **right-click** the tray icon and select "Open Menu"
+
+### Menu Options
+
+- **Playing/Idle** - Toggle your work status
+- **Status** - Select from presets or create custom statuses
+- **Run at Startup** - Enable/disable auto-start with Windows
+- **Open Log** - View the application log file
+- **Donate** - Support the project!
+- **Quit** - Exit the application
+
 ## Installation
 
 ### Option 1: Use Pre-built EXE
@@ -37,7 +61,7 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 2. Double-click to run
 3. The app will run in your system tray
 
-   
+
 ### Option 2: Run from Source
 
 1. Make sure you have **Python 3.8+** installed
@@ -75,23 +99,6 @@ If you want to build your own EXE:
 1. Run `build.bat`
 2. Find your EXE in the `dist` folder
 3. Share `dist\FL Discord RPC.exe` with friends!
-
-## Usage
-
-### Opening the Menu
-
-- **Left-click** the tray icon
-- Or press **Ctrl+Shift+F** on your keyboard
-- Or **right-click** the tray icon and select "Open Menu"
-
-### Menu Options
-
-- **Playing/Idle** - Toggle your work status
-- **Status** - Select from presets or create custom statuses
-- **Run at Startup** - Enable/disable auto-start with Windows
-- **Open Log** - View the application log file
-- **Donate** - Support the project!
-- **Quit** - Exit the application
 
 ## Status Presets
 
@@ -149,7 +156,3 @@ Want to contribute? Feel free to reach out!
 If you find this tool useful, consider supporting its development:
 
 [![Donate with PayPal](https://www.paypalobjects.com/webstatic/mktg/Logo/pp-logo-100px.png)](https://www.paypal.com/donate/?hosted_button_id=VQWNYHWLKV9DL)
-
----
-
-Made with ❤️ for the FL Studio community
