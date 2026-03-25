@@ -22,9 +22,7 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 ## Screenshots
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/tray.png" width="200" alt="Tray Menu Screenshot">
   <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/status.png" width="200" alt="Status Screenshot">
-  <img src="https://raw.githubusercontent.com/absxl/FL-Discord/main/menu.png" width="200" alt="Menu Screenshot">:
 </p>
 
 ## Features
