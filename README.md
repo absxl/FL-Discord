@@ -14,7 +14,7 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 - **Dark Mode UI** - Sleek solarized dark theme for the menu
 - **Keyboard Shortcut** - Press `Ctrl+Shift+F` to quickly open the menu
 
-### Usage
+## Usage
 Try:
 
 - Right-click the tray icon and select "Open Menu" for settings
