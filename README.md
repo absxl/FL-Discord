@@ -28,8 +28,11 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 ## Features
 
 - **Real-time Discord Presence** - Shows your current FL Studio project name on Discord
-- **Playing/Idle Status** - Toggle between active work sessions and idle
+- **Playing/Idle Toggle** - Toggle between active work sessions and idle (green=playing, blue=idle)
+- **Activity Toggle** - Enable/disable Discord presence entirely
 - **Custom Statuses** - Choose from presets or create your own custom statuses (up to 3)
+- **Custom Project Name** - Set a custom name to display instead of your project file
+- **Show .flp Extension** - Toggle to show or hide the .flp extension
 - **Session Timer** - Tracks how long you've been working on a project (live updates!)
 - **Run at Startup** - Option to automatically start when Windows boots
 - **Dark/Light Mode** - Toggle between dark and light theme
@@ -44,11 +47,14 @@ A lightweight Windows app that shows your FL Studio project as Discord Rich Pres
 
 ### Menu Options
 
-- **Playing/Idle** - Toggle your work status
+- **Playing/Idle** - Toggle your work status (green=playing, blue=idle)
+- **Activity** - Enable/disable Discord presence entirely
 - **Status** - Select from presets or create custom statuses (up to 3)
+- **Custom Project** - Enable and set a custom project name
+- **Show .flp extension** - Toggle to show/hide .flp extension
 - **Session** - Shows your current session time (live updates!)
-- **Open Log** - View the application log file
 - **Switch Theme** - Toggle between dark and light mode
+- **Log** - View the application log file
 - **Join Discord** - Join our Discord server for support
 - **Donate** - Support the project!
 - **Quit** - Exit the application
@@ -148,7 +154,7 @@ Having issues? Check the log file at:
 
 Want to contribute? Feel free to reach out!
 
-- **Discord**: @amidnightgospel
+- **Discord**: @absol
 - **GitHub**: @absxl
 
 ## Donate
