@@ -9,7 +9,7 @@
 # =============================================================================
 
 DISCORD_CLIENT_ID = "1486292534002188350"  # <-- paste your Discord App ID here
-VERSION = "1.2.0"
+VERSION = "1.3.24c"
 GITHUB_REPO = "absxl/FL-Discord"
 
 LARGE_IMAGE = "fl_logo"  # art asset key you uploaded to Discord dev portal
