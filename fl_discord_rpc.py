@@ -8,7 +8,7 @@
 #  Just run it and it lives in your system tray.
 # =============================================================================
 
-DISCORD_CLIENT_ID = "YOUR_CLIENT_ID_HERE"  # <-- paste your Discord App ID here
+DISCORD_CLIENT_ID = "1486292534002188350"  # <-- paste your Discord App ID here
 VERSION = "1.2.0"
 GITHUB_REPO = "absxl/FL-Discord"
 
@@ -17,8 +17,7 @@ SMALL_IMAGE_PLAY = "icon_play"
 SMALL_IMAGE_PAUSE = "icon_pause"
 SMALL_IMAGE_REC = "icon_record"
 
-POLL_INTERVAL = 1.0  # seconds between FL Studio window checks
-CLEAR_AFTER = 10.0  # seconds after FL closes before presence clears
+POLL_INTERVAL = 30.0  # seconds between FL Studio connection checks
 
 # =============================================================================
 #  Bootstrap — silently install missing packages before anything else imports
@@ -54,6 +53,7 @@ for _pkg, _imp in [
     ("Pillow", "PIL"),
     ("pywin32", "win32gui"),
     ("keyboard", "keyboard"),
+    ("psutil", "psutil"),
 ]:
     if not _pip_install(_pkg, _imp):
         import ctypes
@@ -103,6 +103,11 @@ _config_file = os.path.join(_log_dir, "config.json")
 _log_file = os.path.join(_log_dir, "fl_discord_rpc.log")
 
 
+def _resource_path(filename):
+    base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_dir, filename)
+
+
 def _check_log_size():
     try:
         if os.path.exists(_log_file):
@@ -124,7 +129,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("fl_rpc")
 log.info("=" * 60)
-log.info("FL Discord RPC v1.0 starting...")
+log.info("FL Discord RPC v1.2.0 starting...")
 log.info("Log file: %s", _log_file)
 
 # =============================================================================
@@ -235,14 +240,12 @@ def _set_startup(enable):
 
 # =============================================================================
 #  FL Studio window reader
-#  Title format: "FL Studio 21 - <Username> - <ProjectName>"
-#  or just:      "FL Studio 21 - <Username>"  (no project loaded)
+#  Title format varies by FL Studio version and can be either:
+#  "<ProjectName> - FL Studio 21" or "FL Studio 21 - <ProjectName>"
 # =============================================================================
 
-FL_TITLE_RE = re.compile(
-    r"(.+?)\s*-\s*FL Studio",  # "ProjectName - FL Studio 21"
-    re.IGNORECASE,
-)
+FL_TITLE_RE = re.compile(r"(.+?)\s*-\s*FL Studio(?:\s|$)", re.IGNORECASE)
+FL_TITLE_PREFIX_RE = re.compile(r"^FL Studio(?:\s+\S+)?\s*-\s*(.+)$", re.IGNORECASE)
 
 
 def _find_fl_window():
@@ -253,7 +256,7 @@ def _find_fl_window():
         if not win32gui.IsWindowVisible(hwnd):
             return
         title = win32gui.GetWindowText(hwnd)
-        if " - FL Studio" in title:
+        if re.search(r"\bFL Studio\b", title, re.IGNORECASE):
             log.debug("Found FL Studio window: '%s'", title)
             result[0] = hwnd
             result[1] = title
@@ -271,8 +274,13 @@ def _get_fl_pid(hwnd) -> int | None:
 
 
 def _read_fl_state(hwnd, title: str) -> dict:
-    m = FL_TITLE_RE.match(title.strip())
-    project = (m.group(1) or "").strip() if m else ""
+    title = title.strip()
+    m = FL_TITLE_RE.match(title)
+    if m:
+        project = m.group(1).strip()
+    else:
+        m = FL_TITLE_PREFIX_RE.match(title)
+        project = m.group(1).strip() if m else ""
     if not project:
         project = "Unnamed"
         log.debug("No project name found in title: '%s'", title)
@@ -382,7 +390,7 @@ class DiscordRPC:
 
 
 def build_presence(state: dict, play_start: float, status: str) -> dict:
-    project = state["project"]
+    project = (state.get("project") or "Unnamed").strip() or "Unnamed"
     playing = state["playing"]
 
     app_state["current_fl_project"] = project
@@ -468,7 +476,7 @@ THEMES = {"dark": SOLARIZED_DARK, "light": SOLARIZED_LIGHT}
 def _make_tray_icon() -> Image.Image:
     """Load fl_logo.png for the tray icon, fallback to generated icon on failure."""
     try:
-        img = Image.open("fl_logo.png")
+        img = Image.open(_resource_path("fl_logo.png"))
         img = img.resize((64, 64), Image.LANCZOS)
         if img.mode != "RGBA":
             img = img.convert("RGBA")
@@ -496,6 +504,7 @@ app_state = {
     "show_flp_extension": True,
     "activity_enabled": True,
     "current_fl_project": "",
+    "fl_connected": False,
 }
 
 _rpc = None
@@ -539,11 +548,19 @@ class SolarizedMenu:
 
         def set_icon():
             try:
-                icon_img = Image.open("fl_logo.png")
+                icon_img = Image.open(_resource_path("fl_logo.png"))
                 ico_path = os.path.join(_log_dir, "fl_icon.ico")
-                icon_img.save(ico_path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+                icon_img.save(
+                    ico_path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48)]
+                )
                 menu.wm_iconbitmap(ico_path)
-                root.iconphoto(True, tk.PhotoImage(data=icon_img.resize((32, 32), Image.LANCZOS).tobytes(), format="PNG"))
+                root.iconphoto(
+                    True,
+                    tk.PhotoImage(
+                        data=icon_img.resize((32, 32), Image.LANCZOS).tobytes(),
+                        format="PNG",
+                    ),
+                )
             except Exception as e:
                 log.warning("Failed to set window icon: %s", e)
 
@@ -571,7 +588,7 @@ class SolarizedMenu:
         header_frame.bind("<B1-Motion>", do_drag)
 
         try:
-            logo_img = Image.open("fl_logo.png")
+            logo_img = Image.open(_resource_path("fl_logo.png"))
             logo_img = logo_img.resize((24, 24), Image.LANCZOS)
             self._header_logo = tk.PhotoImage(data=logo_img.tobytes(), format="PNG")
             logo_label = tk.Label(
@@ -684,7 +701,9 @@ class SolarizedMenu:
         pass  # Don't close when clicking on entry field
 
     def _build_buttons(self, parent, colors):
-        self.activity_enabled_var = tk.BooleanVar(value=app_state.get("activity_enabled", True))
+        self.activity_enabled_var = tk.BooleanVar(
+            value=app_state.get("activity_enabled", True)
+        )
 
         def on_activity_toggle():
             app_state["activity_enabled"] = self.activity_enabled_var.get()
@@ -716,6 +735,16 @@ class SolarizedMenu:
             fg=colors["fg"],
         )
         self._discord_status_label.pack(side="left", padx=(5, 0))
+
+        self._fl_status_label = tk.Label(
+            parent,
+            text="FL Studio: Not detected",
+            font=("Segoe UI", 9, "bold"),
+            bg=colors["bg"],
+            fg="#e74c3c",
+        )
+        self._fl_status_label.pack(pady=(0, 5))
+        self._update_fl_status_display()
 
         def update_discord_status_main():
             try:
@@ -1082,8 +1111,25 @@ class SolarizedMenu:
                 text = "Disconnected"
                 color = "#e74c3c"
 
-            if hasattr(self, "_discord_status_label") and self._discord_status_label.winfo_exists():
+            if (
+                hasattr(self, "_discord_status_label")
+                and self._discord_status_label.winfo_exists()
+            ):
                 self._discord_status_label.config(text=f"Discord: {text}", fg=color)
+        except Exception:
+            pass
+
+    def _update_fl_status_display(self):
+        try:
+            connected = app_state.get("fl_connected", False)
+            if (
+                hasattr(self, "_fl_status_label")
+                and self._fl_status_label.winfo_exists()
+            ):
+                self._fl_status_label.config(
+                    text=f"FL Studio: {'Connected' if connected else 'Not detected'}",
+                    fg="#2ecc71" if connected else "#e74c3c",
+                )
         except Exception:
             pass
 
@@ -1136,7 +1182,9 @@ class SolarizedMenu:
         update_session_time()
 
     def _get_session_time_string(self):
-        log.debug(f"_get_session_time_string called - playing={app_state['playing']}, session_start={app_state['session_start']}")
+        log.debug(
+            f"_get_session_time_string called - playing={app_state['playing']}, session_start={app_state['session_start']}"
+        )
         if app_state["playing"] and app_state["session_start"] > 0:
             total_seconds = time.time() - app_state["session_start"]
             log.debug(f"Calculated session time: {total_seconds} seconds")
@@ -1317,7 +1365,10 @@ class SolarizedMenu:
         app_state["session_start"] = time.time()
         log.info("Session timer reset to current time")
         try:
-            if hasattr(self, "_header_session_label") and self._header_session_label.winfo_exists():
+            if (
+                hasattr(self, "_header_session_label")
+                and self._header_session_label.winfo_exists()
+            ):
                 self._header_session_label.config(text=self._get_session_time_string())
         except Exception as e:
             log.warning("Failed to update session label: %s", e)
@@ -1632,7 +1683,7 @@ def _quit():
 
 def main():
     log.info("=" * 60)
-    log.info("FL Discord RPC v1.0")
+    log.info("FL Discord RPC v%s", VERSION)
     log.info("=" * 60)
 
     if DISCORD_CLIENT_ID == "YOUR_CLIENT_ID_HERE":
@@ -1670,15 +1721,12 @@ def main():
     log.info("  - Run at startup: %s", _get_startup_path())
     log.info("Starting FL Discord RPC...")
     log.info("Poll interval: %s seconds", POLL_INTERVAL)
-    log.info("Clear after: %s seconds", CLEAR_AFTER)
 
     stop_event = threading.Event()
     icon_ref = [None]
 
     global _rpc
     _rpc = DiscordRPC(DISCORD_CLIENT_ID)
-    last_seen_fl = 0.0
-    fl_was_open = False
     last_project = ""
 
     log.info("Starting system tray...")
@@ -1691,22 +1739,19 @@ def main():
 
     while not stop_event.is_set():
         hwnd, title = _find_fl_window()
+        fl_connected = hwnd is not None
 
-        if hwnd is None:
-            if fl_was_open:
-                closed_duration = time.monotonic() - last_seen_fl
-                if closed_duration > CLEAR_AFTER:
-                    _rpc.clear()
-                    fl_was_open = False
-                    log.info(
-                        "FL Studio closed — presence cleared after %.1f seconds",
-                        closed_duration,
-                    )
-        else:
-            last_seen_fl = time.monotonic()
-            if not fl_was_open:
+        if fl_connected != app_state["fl_connected"]:
+            app_state["fl_connected"] = fl_connected
+            if solarized_menu:
+                solarized_menu._update_fl_status_display()
+            if fl_connected:
                 log.info("FL Studio detected! Window: '%s'", title)
-            fl_was_open = True
+            else:
+                _rpc.clear()
+                log.info("FL Studio not detected — presence cleared.")
+
+        if fl_connected:
 
             state = _read_fl_state(hwnd, title)
 
@@ -1748,7 +1793,7 @@ def main():
             _rpc._last_playing = app_state["playing"]
             _rpc._last_status = app_state["status"]
 
-        time.sleep(POLL_INTERVAL)
+        stop_event.wait(POLL_INTERVAL)
 
     log.info("Saving configuration...")
     config = load_config()
